@@ -29,6 +29,7 @@
 5. With process, you won't be able to invoke health check
 
 <h4>Notes</h4>
+
  - The payload for **creating** or **updating** a user should look like this(Make sure you include the correct id when updating):
    {
       "user": {
