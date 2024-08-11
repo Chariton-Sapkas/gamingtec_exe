@@ -40,10 +40,12 @@
          "password": "MyStrongPassword"
       }
    }
+
  - The payload for **deleting** or **getting** a user should look like this:
    {
       "id": "someID"
    }
+
  - The payload for **listing** users should look like this:
    {
        "country": "UK",
