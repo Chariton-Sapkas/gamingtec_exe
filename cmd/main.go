@@ -1,45 +1,48 @@
 package main
 
 import (
+	"google.golang.org/grpc/reflection"
 	"log"
 	"net"
-	"net/http"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
 
 	pb "gamingtec_exe/api/proto"
-	store "gamingtec_exe/storage"
-
 	"gamingtec_exe/service"
-	"google.golang.org/grpc"
+	store "gamingtec_exe/storage"
 )
 
 func main() {
-	lis, err := net.Listen("tcp", ":50051")
+	var (
+		serverPort = ":5050"
+	)
+	log.Println("Attempting to start server now!")
+
+	lis, err := net.Listen("tcp", serverPort)
 	if err != nil {
 		log.Fatalf("failed to start server: %v", err)
 	}
 
+	// set user store
 	userStore := store.NewUserStore()
 	grpcServer := grpc.NewServer()
 	pb.RegisterUserServiceServer(grpcServer, service.NewUserServiceServer(userStore))
 
-	log.Println("gRPC server listening on :50051")
-	if err := grpcServer.Serve(lis); err != nil {
+	// Register the Health Service
+	healthServer := health.NewServer()
+	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
+
+	// Set the health status to SERVING
+	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
+
+	// Enable reflection for better tool support
+	reflection.Register(grpcServer)
+
+	// Initiate server on given port
+	log.Println("gRPC server listening on " + serverPort)
+	if err = grpcServer.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
-	}
-
-	http.HandleFunc("/health", healthCheckHandler)
-	go func() {
-		log.Println("Health check server listening on :8080")
-		if err := http.ListenAndServe(":8080", nil); err != nil {
-			log.Fatalf("failed to serve health check: %v", err)
-		}
-	}()
-}
-
-func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	_, err := w.Write([]byte("OK"))
-	if err != nil {
-		return
 	}
 }

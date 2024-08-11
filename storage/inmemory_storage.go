@@ -1,12 +1,14 @@
 package storage
 
 import (
+	"gamingtec_exe/utils"
+	"log"
 	"sync"
 
 	pb "gamingtec_exe/api/proto"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/google/uuid"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type UserStore struct {
@@ -20,7 +22,7 @@ func NewUserStore() *UserStore {
 	}
 }
 
-func (s *UserStore) AddUser(user *pb.User) *pb.User {
+func (s *UserStore) CreateUser(user *pb.User) *pb.User {
 	var (
 		now = timestamppb.Now()
 	)
@@ -33,6 +35,8 @@ func (s *UserStore) AddUser(user *pb.User) *pb.User {
 	user.UpdatedAt = now
 	s.users[user.Id] = user
 
+	log.Printf("User %s %s has been successfully created.", user.FirstName, user.LastName)
+
 	return user
 }
 
@@ -44,6 +48,7 @@ func (s *UserStore) UpdateUser(user *pb.User) (*pb.User, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	// if the user does not exist return false
 	existingUser, exists := s.users[user.Id]
 	if !exists {
 		return nil, false
@@ -52,6 +57,9 @@ func (s *UserStore) UpdateUser(user *pb.User) (*pb.User, bool) {
 	user.CreatedAt = existingUser.CreatedAt
 	user.UpdatedAt = now
 	s.users[user.Id] = user
+
+	log.Printf("User %s %s has been successfully updated.", user.FirstName, user.LastName)
+
 	return user, true
 }
 
@@ -63,6 +71,8 @@ func (s *UserStore) DeleteUser(id string) bool {
 		delete(s.users, id)
 		return true
 	}
+
+	log.Printf("User with id: %s has been successfully deleted.", id)
 	return false
 }
 
@@ -71,45 +81,30 @@ func (s *UserStore) GetUser(id string) (*pb.User, bool) {
 	defer s.mu.RUnlock()
 
 	user, exists := s.users[id]
+
+	if exists {
+		log.Printf("User with id: %s has been found.", id)
+	} else {
+		log.Printf("User not found with id: %s.", id)
+	}
+
 	return user, exists
 }
 
 func (s *UserStore) ListUsers(country string, page, pageSize int) []*pb.User {
-	var (
-		defaultPageSize = 5
-	)
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	var users []*pb.User
-	for _, user := range s.users {
-		if country == "" || user.Country == country {
-			users = append(users, user)
-		}
-		if country == "" {
-			users = append(users, user)
-		}
-	}
+	// create a slice from mapper
+	userSlice := utils.MapToSlice(s.users)
 
-	// if there is no pagination return all users
-	if page == 0 && pageSize == 0 {
-		return users
-	}
+	// Filter by country
+	filteredUsers := utils.FilterByCountry(country, userSlice)
 
-	if pageSize == 0 {
-		pageSize = defaultPageSize
-	}
+	// Apply pagination
+	paginatedUsers := utils.HandlePagination(pageSize, page, filteredUsers)
 
-	start := (page - 1) * pageSize
-	end := start + pageSize
+	log.Printf("Found %d users in total.", len(paginatedUsers))
 
-	if start >= len(users) {
-		return []*pb.User{}
-	}
-
-	if end > len(users) {
-		end = len(users)
-	}
-
-	return users[start:end]
+	return paginatedUsers
 }

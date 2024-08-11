@@ -20,11 +20,11 @@ func NewUserServiceServer(store *store.UserStore) *UserServiceServer {
 	return &UserServiceServer{store: store}
 }
 
-func (s *UserServiceServer) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.User, error) {
-	return s.store.AddUser(req.User), nil
+func (s *UserServiceServer) CreateUser(_ context.Context, req *pb.CreateUserRequest) (*pb.User, error) {
+	return s.store.CreateUser(req.User), nil
 }
 
-func (s *UserServiceServer) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (*pb.User, error) {
+func (s *UserServiceServer) UpdateUser(_ context.Context, req *pb.UpdateUserRequest) (*pb.User, error) {
 	user, ok := s.store.UpdateUser(req.User)
 	if !ok {
 		return nil, status.Errorf(codes.NotFound, "user not found")
@@ -32,14 +32,14 @@ func (s *UserServiceServer) UpdateUser(ctx context.Context, req *pb.UpdateUserRe
 	return user, nil
 }
 
-func (s *UserServiceServer) DeleteUser(ctx context.Context, req *pb.DeleteUserRequest) (*emptypb.Empty, error) {
+func (s *UserServiceServer) DeleteUser(_ context.Context, req *pb.DeleteUserRequest) (*emptypb.Empty, error) {
 	if !s.store.DeleteUser(req.Id) {
 		return nil, status.Errorf(codes.NotFound, "user not found")
 	}
 	return &emptypb.Empty{}, nil
 }
 
-func (s *UserServiceServer) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.User, error) {
+func (s *UserServiceServer) GetUser(_ context.Context, req *pb.GetUserRequest) (*pb.User, error) {
 	user, ok := s.store.GetUser(req.Id)
 	if !ok {
 		return nil, status.Errorf(codes.NotFound, "user not found")
@@ -47,7 +47,7 @@ func (s *UserServiceServer) GetUser(ctx context.Context, req *pb.GetUserRequest)
 	return user, nil
 }
 
-func (s *UserServiceServer) ListUsers(ctx context.Context, req *pb.ListUsersRequest) (*pb.ListUsersResponse, error) {
+func (s *UserServiceServer) ListUsers(_ context.Context, req *pb.ListUsersRequest) (*pb.ListUsersResponse, error) {
 	users := s.store.ListUsers(req.Country, int(req.Page), int(req.PageSize))
 	return &pb.ListUsersResponse{Users: users}, nil
 }
